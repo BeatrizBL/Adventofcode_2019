@@ -20,7 +20,7 @@ def intcode_computer(program: List[int],
       three positions - the first two indicate the positions from which you should read 
       the input values, and the third indicates the position at which the output should 
       be stored.
-      
+
     - Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead 
       of adding them. 
     """
@@ -33,7 +33,8 @@ def intcode_computer(program: List[int],
 
         # Check opcode
         if opcode not in [sum_code, multiply_code, finish_code]:
-            raise ValueError('Something went wrong! Invalid opcode: {}'.format(opcode))
+            raise ValueError(
+                'Something went wrong! Invalid opcode: {}'.format(opcode))
 
         # Finish execution
         if opcode == finish_code:
@@ -51,6 +52,83 @@ def intcode_computer(program: List[int],
         if opcode == multiply_code:
             output[pos_store] = output[pos1] * output[pos2]
 
-        i = i + 4 # Jump to next opcode
-            
+        i = i + 4  # Jump to next opcode
+
     raise ValueError('Execution finished without ending opcode!')
+
+
+def binary_search_code(program: List[int],
+                       code: int,
+                       verb_pos: int = 2,
+                       value_range: tuple = (0,99)
+                       ) -> int:
+    """
+    Iterative implementation of binary search.
+    It returns the value between 0 and 99 for the "verb" that generates 
+    the desired error code for the given program.
+    If it can't find it, returns -1.
+    """
+
+    # Initialize the values
+    program = program.copy()
+    left = value_range[0]
+    right = value_range[1]
+
+    # Binary search
+    while left <= right:
+        mid = int(left + (right - left)/2)
+
+        program[verb_pos] = mid
+        output = intcode_computer(program)
+        value = output[0]
+
+        # Check if the value is at mid
+        if code == value:
+            return mid
+
+        # If the value is greater, ignore left half
+        elif value < code:
+            left = mid + 1
+
+        # If the value is smaller, ignore right half
+        else:
+            right = mid - 1
+
+    # If the error code can't be obtained
+    return -1
+
+
+def get_error_code(output: int,
+                   program: List[int]
+                   ) -> int:
+    """
+    Determine what pair of inputs, "noun" and "verb", produces the output.
+    The inputs should be provided to the program by replacing the values 
+    at addresses 1 and 2. The value placed in address 1 is called the "noun", 
+    and the value placed in address 2 is called the "verb".
+    It returns the error code: 100 * noun + verb
+
+    Implementation options:
+        - By brute force, looping twice over 0-99
+        - Looping over the noun linearly, and using binary search for the verb,
+          since all the values of the program are integers, and therefore
+          positive (IMPLEMENTED)
+        - Optimize the possible value intervals for both noun and verb checking
+          the possible min and max outputs for each pair
+    """
+
+    # Reset the memory
+    program = program.copy()
+
+    # Linear loop over the noun
+    for noun in range(0, 100):
+        program[1] = noun
+
+        # Binary search over the verb
+        verb = binary_search_code(program, output)
+
+        # Return the code if found
+        if verb != -1:
+            return (100 * noun + verb)
+
+    raise ValueError('Code not found!')
