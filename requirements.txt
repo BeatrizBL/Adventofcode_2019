@@ -21,3 +21,4 @@ scipy>=0.16.0
 seaborn>=0.9.0
 vega>=2.4.0
 selenium>=3.141.0
+streamlit==0.49.0
