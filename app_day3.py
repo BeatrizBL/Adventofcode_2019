@@ -29,6 +29,8 @@ if os.path.exists(root_path):
         # Execution
         if st.button('Go!'):
 
+            '## Part 1'
+
             # Format wires lists
             wires = [w.replace('\n', '') for w in wires]
             wires = [w.split(',') for w in wires]
@@ -83,6 +85,32 @@ if os.path.exists(root_path):
 
                             st.markdown(
                                 'Minimum Manhattan distance: {}'.format(dist_res['distance']))
+
+                            '## Part 2'
+
+                            try:
+                                res_part2 = day3.get_minimum_combined_steps(
+                                    wires,
+                                    size_x=dim, size_y=dim,
+                                    central_port=central_port,
+                                    matrix=full_matrix,
+                                    knot_id=len(wires)
+                                )
+
+                                # Plot wire paths with closest knot
+                                fig = wire_paths.plotly_interactive_paths(
+                                    turn_points,
+                                    central_port=central_port,
+                                    knot=res_part2['position']
+                                )
+                                st.plotly_chart(fig)
+
+                                st.markdown(
+                                    'Minimum combined steps: {}'.format(res_part2['distance']))
+
+                            except Exception as e:
+                                st.error(
+                                    'Error computing minimum combined steps! {}'.format(e))
 
                         except Exception as e:
                             st.error(
