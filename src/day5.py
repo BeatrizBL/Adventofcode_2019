@@ -15,6 +15,10 @@ class intcode_computer(object):
                                      '02': self._multiply,
                                      '03': self._input,
                                      '04': self._output,
+                                     '05': self._jump_if_true,
+                                     '06': self._jump_if_false,
+                                     '07': self._less_than,
+                                     '08': self._equals,
                                      '99': self._finish
                                      }
 
@@ -114,6 +118,50 @@ class intcode_computer(object):
 
         # Increate the pointer
         self.pointer += 2
+
+    def _jump_if_true(self, modes: str, n_params: int = 2, **kwargs):
+        # Read the method parameters
+        params = self._read_parameters(modes, n_params)
+
+        if params[0] != 0:
+            self.pointer = params[1]
+        else:
+            self.pointer += 3
+
+    def _jump_if_false(self, modes: str, n_params: int = 2, **kwargs):
+        # Read the method parameters
+        params = self._read_parameters(modes, n_params)
+
+        if params[0] == 0:
+            self.pointer = params[1]
+        else:
+            self.pointer += 3
+
+    def _less_than(self, modes: str, n_params: int = 2, **kwargs):
+        # Read the method parameters
+        params = self._read_parameters(modes, n_params)
+
+        # Get the storing possition
+        pos = self.memory[self.pointer+3]
+
+        # Apply the method
+        self.memory[pos] = 1 if params[0] < params[1] else 0
+
+        # Increate the pointer
+        self.pointer += 4
+
+    def _equals(self, modes: str, n_params: int = 2, **kwargs):
+        # Read the method parameters
+        params = self._read_parameters(modes, n_params)
+
+        # Get the storing possition
+        pos = self.memory[self.pointer+3]
+
+        # Apply the method
+        self.memory[pos] = 1 if params[0] == params[1] else 0
+
+        # Increate the pointer
+        self.pointer += 4
 
     def _finish(self, **kwargs):
         self.execution_finished = True
