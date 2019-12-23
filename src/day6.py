@@ -5,7 +5,8 @@ from src.graph import Graph
 
 def create_graph(orbits_path: str = None,
                  orbits: List[str] = None,
-                 root_path: str = 'data/raw'
+                 root_path: str = 'data/raw',
+                 directed: bool = True
                  ) -> Graph:
     """
     Creates an orbits graph. The orbit information can be provided as 
@@ -17,8 +18,9 @@ def create_graph(orbits_path: str = None,
         # Check the parameters
         path = os.path.join(root_path, orbits_path)
         if not os.path.exists(path):
-            raise ValueError('Orbit information not available at {}'.format(path))
-        
+            raise ValueError(
+                'Orbit information not available at {}'.format(path))
+
         if orbits is not None:
             raise ValueError('WARNING: Using orbits from file')
 
@@ -31,7 +33,7 @@ def create_graph(orbits_path: str = None,
         raise ValueError('Provide some orbits')
 
     # Create the graph
-    g = Graph()
+    g = Graph(directed=directed)
     for orbit in orbits:
         objects = orbit.split(')')
         g.add_edge(objects[0], objects[1])
@@ -42,7 +44,7 @@ def create_graph(orbits_path: str = None,
 def count_orbits(g: Graph, center: str = 'COM') -> int:
     """
     Counts the total number of direct and indirect orbits in the graph.
-    
+
     Note:  This implementation is quite inefficient, since it uses DFS 
     starting always with "COM". Then, the same path is computed a lot 
     of different times for big graphs. It could be optimized moving also
@@ -55,3 +57,17 @@ def count_orbits(g: Graph, center: str = 'COM') -> int:
     for obj in objs:
         n = n + len(g.find_path_DFS(center, obj)) - 1
     return n
+
+
+def count_transfers(g: Graph,
+                    object1: str = 'SAN',
+                    object2: str = 'YOU'
+                    ) -> int:
+    """
+    Counts the number of orbit transfers needed for object1 to
+    orbit the same object as object2.
+    """
+    path = g.find_path_DFS(object1, object2)
+    if path is None:
+        raise ValueError('Path between objects can not be found.')
+    return(len(path)-3)

@@ -1,8 +1,9 @@
 
 class Graph:
 
-    def __init__(self):
+    def __init__(self, directed: bool = True):
         self._graph_dict = {}
+        self.directed = directed
 
     def add_edge(self, node, neighbor):
         if node not in self._graph_dict:
@@ -12,6 +13,10 @@ class Graph:
         
         if neighbor not in self._graph_dict:
             self._graph_dict[neighbor] = []
+
+        # Add edge back for non-directed graphs
+        if not self.directed:
+            self._graph_dict[neighbor].append(node)
 
     def get_nodes(self):
         return list(self._graph_dict.keys())
@@ -30,6 +35,9 @@ class Graph:
         return sum([len(ngs) for ngs in self._graph_dict.values()])
 
     def find_path_DFS(self, start, end):
+        if start not in self.get_nodes() or end not in self.get_nodes():
+            raise ValueError('Node not available in the graph!')
+
         stack = [(start, [start])]
         while stack:
             (node, path) = stack.pop()
