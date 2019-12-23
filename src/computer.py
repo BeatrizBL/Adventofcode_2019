@@ -4,11 +4,21 @@ from typing import List
 class intcode_computer(object):
 
     def __init__(self,
-                 program: List[int]
+                 program: List[int],
+                 program_input: List[int] = None
                  ):
+
+        # Computer parameters
         self.memory = program.copy()
         self.pointer = 0
         self.execution_finished = False
+
+        # Programa input
+        self.input = program_input
+        self.input_pointer = 0
+
+        # Program output
+        self.output = None
 
         # Dictionary of method to apply depending on the code
         self.instruction_appliers = {'01': self._sum,
@@ -22,7 +32,7 @@ class intcode_computer(object):
                                      '99': self._finish
                                      }
 
-    def run_program(self, program_input: int = None):
+    def run_program(self):
         """
         Runs the program using the specified input
         """
@@ -39,13 +49,15 @@ class intcode_computer(object):
 
             # Call the corresponding method
             method = self.instruction_appliers[op]
-            method(modes=modes, program_input=program_input)
+            method(modes=modes)
 
         if self.execution_finished is False:
             raise ValueError('Execution finished without ending opcode!')
 
         # Restart the pointer for next execution
         self.pointer = 0
+
+        return self.output
 
     def _read_parameters(self,
                          modes: str,
@@ -96,14 +108,18 @@ class intcode_computer(object):
         # Increate the pointer
         self.pointer += 4
 
-    def _input(self, program_input: int, **kwargs):
-        if program_input is None:
+    def _input(self, **kwargs):
+        if self.input is None:
             raise ValueError('No input provided!')
+        if self.input_pointer >= len(self.input):
+            raise ValueError('Provided input is too short!')
 
         # Get the storing possition
         pos = self.memory[self.pointer+1]
 
         # Store the input value
+        program_input = self.input[self.input_pointer]
+        self.input_pointer += 1
         self.memory[pos] = program_input
 
         # Increate the pointer
@@ -114,7 +130,9 @@ class intcode_computer(object):
         params = self._read_parameters(modes, n_params)
 
         # Output the value
-        print(params[0])
+        if self.output is not None:
+            print('Intermediate output {}'.format(self.output))
+        self.output = params[0]
 
         # Increate the pointer
         self.pointer += 2
