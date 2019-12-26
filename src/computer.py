@@ -1,24 +1,28 @@
 from typing import List
+from queue import Queue
+import threading
 
 
 class intcode_computer(object):
 
     def __init__(self,
                  program: List[int],
-                 program_input: List[int] = None
+                 input_queue: List[int] = None,
+                 output_queue: List[int] = None,
                  ):
 
         # Computer parameters
         self.memory = program.copy()
         self.pointer = 0
         self.execution_finished = False
+        self.program_finished = threading.Event()
+        self.thread = threading.Thread(target=self._run_program)
 
         # Programa input
-        self.input = program_input
-        self.input_pointer = 0
+        self.input_queue = Queue() if input_queue is None else input_queue
 
         # Program output
-        self.output = None
+        self.output_queue = Queue() if output_queue is None else output_queue
 
         # Dictionary of method to apply depending on the code
         self.instruction_appliers = {'01': self._sum,
@@ -32,9 +36,24 @@ class intcode_computer(object):
                                      '99': self._finish
                                      }
 
+    def set_input(self, input):
+        self.input_queue.put(input)
+
+    def get_output(self):
+        output_list = []
+        while not self.output_queue.empty():
+            output_list.append(self.output_queue.get())
+        return output_list
+
     def run_program(self):
         """
-        Runs the program using the specified input
+        Runs the program
+        """
+        self.thread.start()
+
+    def _run_program(self):
+        """
+        Private method to run the program in a thread 
         """
 
         while self.execution_finished is False and self.pointer < len(self.memory):
@@ -57,13 +76,15 @@ class intcode_computer(object):
         # Restart the pointer for next execution
         self.pointer = 0
 
-        return self.output
+        # Set the event that the program has finished
+        self.program_finished.set()
 
     def _read_parameters(self,
                          modes: str,
                          n_params: int
                          ) -> List[int]:
-        """Reads the parameters of a method using their mode.
+        """
+        Reads the parameters of a method using their mode.
         The modes parameter is the string opcode without the
         two last digits of the operation identifier.
         """
@@ -109,18 +130,12 @@ class intcode_computer(object):
         self.pointer += 4
 
     def _input(self, **kwargs):
-        if self.input is None:
-            raise ValueError('No input provided!')
-        if self.input_pointer >= len(self.input):
-            raise ValueError('Provided input is too short!')
-
         # Get the storing possition
         pos = self.memory[self.pointer+1]
 
         # Store the input value
-        program_input = self.input[self.input_pointer]
-        self.input_pointer += 1
-        self.memory[pos] = program_input
+        self.memory[pos] = self.input_queue.get()
+        self.input_queue.task_done()
 
         # Increate the pointer
         self.pointer += 2
@@ -129,10 +144,8 @@ class intcode_computer(object):
         # Read the method parameters
         params = self._read_parameters(modes, n_params)
 
-        # Output the value
-        if self.output is not None:
-            print('Intermediate output {}'.format(self.output))
-        self.output = params[0]
+        # Add output value to the queue
+        self.output_queue.put(params[0])
 
         # Increate the pointer
         self.pointer += 2
