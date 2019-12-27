@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from src import day8
+from src.visualization import altair_plots
 
 # Side bar settings
 st.sidebar.markdown('### Settings')
@@ -41,6 +42,19 @@ if os.path.exists(path):
                 # Get the corruption code
                 code = day8.check_corrupted_image(img)
                 st.info('Corruption check code: {}'.format(code))
+
+                '## Part 2'
+                st.markdown('Decode the image')
+                try:
+                    decoded = day8.decode_image(img)
+                    
+                    # Transform image to dataframe
+                    df_img = day8.image_to_dataframe(decoded)
+                    chart = altair_plots.heat_map(df_img)
+                    st.altair_chart(chart)
+
+                except Exception as e:
+                    st.error('Error decoding image! {}'.format(e))
 
             except Exception as e:
                 st.error('Error getting corruption code! {}'.format(e))
