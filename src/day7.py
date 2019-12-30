@@ -36,7 +36,8 @@ class Amplifiers(object):
             # Create amplifier
             amplifier = computer.intcode_computer(program=program,
                                                   input_queue=input_queue,
-                                                  output_queue=output_queue
+                                                  output_queue=output_queue,
+                                                  wait_execution=False
                                                   )
             self._amplifiers.append(amplifier)
 
@@ -58,7 +59,7 @@ class Amplifiers(object):
             self._amplifiers[i].run_program()
 
         # Wait until the last amplifier ends
-        self._amplifiers[n_amplifiers-1].program_finished.wait()
+        self._amplifiers[n_amplifiers-1].thread.join()
 
         # Return the chain output
         return self._amplifiers[n_amplifiers-1].get_output()[0]

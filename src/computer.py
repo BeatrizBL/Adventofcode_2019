@@ -5,11 +5,23 @@ import threading
 
 class intcode_computer(object):
 
+    def start_computer(self, program: List[int] = None):
+        """
+        Starts the computer to run a program
+        """
+        self.pointer = 0
+        self.relative_base = 0
+        self.execution_finished = False
+
+        program = self.program if program is None else program
+        self.memory = dict(zip(list(range(len(program))), program))
+
     def __init__(self,
                  program: List[int],
                  input_queue: List[int] = None,
                  output_queue: List[int] = None,
-                 test_mode: bool = False
+                 test_mode: bool = False,
+                 wait_execution: bool = True
                  ):
 
         # Check the parameters
@@ -17,20 +29,13 @@ class intcode_computer(object):
             raise ValueError('Program must be a list of integers!')
 
         # Computer parameters
-        self.pointer = 0
-        self.relative_base = 0
+        self.start_computer(program)
         self.test_mode = test_mode
+        self.wait_execution = wait_execution
 
         # Program info
-        self.memory = dict(zip(list(range(len(program))), program))
-        self.execution_finished = False
-        self.program_finished = threading.Event()
-        self.thread = threading.Thread(target=self._run_program)
-
-        # Programa input
+        self.program = program
         self.input_queue = Queue() if input_queue is None else input_queue
-
-        # Program output
         self.output_queue = Queue() if output_queue is None else output_queue
 
         # Dictionary of method to apply depending on the code
@@ -59,7 +64,13 @@ class intcode_computer(object):
         """
         Runs the program
         """
+        # Run the program
+        self.thread = threading.Thread(target=self._run_program)
         self.thread.start()
+        
+        # Wait for it to finish
+        if self.wait_execution is True:
+            self.thread.join()
 
     def _format_modes(self, modes: str, n_params: int) -> List[int]:
         """
@@ -75,7 +86,6 @@ class intcode_computer(object):
         """
         Private method to run the program in a thread 
         """
-
         while self.execution_finished is False and self.pointer < len(self.memory):
 
             # Read instruction code
@@ -102,11 +112,6 @@ class intcode_computer(object):
         if self.execution_finished is False:
             raise ValueError('Execution finished without ending opcode!')
 
-        # Restart the pointer for next execution
-        self.pointer = 0
-
-        # Set the event that the program has finished
-        self.program_finished.set()
 
     def _get_position(self, mode: int, pointer_offset: int = 0):
         """
