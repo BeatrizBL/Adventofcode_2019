@@ -55,7 +55,7 @@ class intcode_computer(object):
         self.input_queue.put(input)
 
     def get_output(self):
-        output_list = []
+        output_list = [self.output_queue.get()]
         while not self.output_queue.empty():
             output_list.append(self.output_queue.get())
         return output_list
