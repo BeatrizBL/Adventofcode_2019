@@ -9,6 +9,10 @@ import ipywidgets as widgets
 from ipywidgets import interact
 from src.visualization import altair_plots
 
+# Altair plots too slow for updating
+import matplotlib.pyplot as plt
+import matplotlib.animation
+
 
 def read_asteroid_map(map_path: str,
                       root_path: str = 'data/raw',
@@ -151,17 +155,11 @@ def mark_visible_asteroids(asteroids_map: np.ndarray,
     return asteroids_map
 
 
-def plot_asteroid_map(asteroids_map: np.ndarray,
-                      visible_asteroids: np.ndarray,
-                      optimal_point: tuple,
-                      legend_visible: bool = True,
-                      xlims: tuple = None,
-                      ylims: tuple = None
-                      ):
-    """
-    Plot an asteroid map, marking the visible and non-visible ones
-    from the optimal position
-    """
+def create_plotting_dataframe(asteroids_map: np.ndarray,
+                              visible_asteroids: np.ndarray,
+                              optimal_point: tuple
+                              ) -> pd.DataFrame:
+
     # Lists of tuples
     asteroids = list(zip(*np.where(asteroids_map == 1)))
     positions = list(zip(*np.where(visible_asteroids == 1)))
@@ -174,9 +172,29 @@ def plot_asteroid_map(asteroids_map: np.ndarray,
                        'y': [-p[1] for p in asteroids],
                        'value': values})
 
+    return df
+
+
+def plot_asteroid_map(asteroids_map: np.ndarray,
+                      visible_asteroids: np.ndarray,
+                      optimal_point: tuple,
+                      legend_visible: bool = True,
+                      xlims: tuple = None,
+                      ylims: tuple = None
+                      ):
+    """
+    Plot an asteroid map, marking the visible and non-visible ones
+    from the optimal position
+    """
+
+    df = create_plotting_dataframe(asteroids_map,
+                                   visible_asteroids,
+                                   optimal_point)
+
     # Plot
     altair_plots.scatter_plot(df,
-                              sorting=['Optimal', 'Visible', 'Non visible'],
+                              sorting=['Optimal',
+                                       'Visible', 'Non visible'],
                               legend_visible=legend_visible,
                               xlims=xlims,
                               ylims=ylims
@@ -302,22 +320,69 @@ def animated_vaporization(asteroids_map: np.ndarray,
 
     asteroids_map = asteroids_map.copy()
 
-    def demo(i):
+    # Create empty plot
+    fig, ax = plt.subplots(figsize=(7, 7))
+    x, y = [], []
+    size = 5000/len(asteroids_map)
+    sc = ax.scatter(x, y, s=size)
+    line, = ax.plot(x, y, 'r-', linewidth=2)
+    plt.xlim(-1, asteroids_map.shape[0])
+    plt.ylim(-asteroids_map.shape[1], 1)
+
+    def animate(i):
+        # Mark asteroid to vaporize
         asteroid = vaporized[i]
         fire = np.zeros(asteroids_map.shape)
         fire[asteroid[0], asteroid[1]] = 1
-        chart = plot_asteroid_map(asteroids_map,
-                                  visible_asteroids=fire,
-                                  optimal_point=location,
-                                  legend_visible=False,
-                                  xlims=(0, asteroids_map.shape[0]-1),
-                                  ylims=(-asteroids_map.shape[1]+1, 0),
-                                  )
-        asteroids_map[asteroid[0], asteroid[1]] = 0
-        return chart
 
-    return interact(demo, i=widgets.Play(value=0,
-                                         min=0,
-                                         max=(len(vaporized)-1),
-                                         step=1,
-                                         ))
+        # To dataframe
+        df = create_plotting_dataframe(asteroids_map=asteroids_map,
+                                       visible_asteroids=fire,
+                                       optimal_point=location)
+
+        # Update plot values
+        sc.set_offsets(np.c_[df['x'].values, df['y'].values])
+        df['color'] = df['value'].apply(lambda c: 'b' if c=='Optimal' else ('r' if c=='Visible' else 'k'))
+        sc.set_color(df['color'].values)
+
+        line.set_data([location[0], asteroid[0]], [-location[1], -asteroid[1]])
+
+        # Vaporized asteroid
+        asteroids_map[asteroid[0], asteroid[1]] = 0
+
+    ani = matplotlib.animation.FuncAnimation(fig, animate,
+                                             frames=len(vaporized), 
+                                             interval=200, repeat=False)
+    return ani
+
+
+# def animated_vaporization(asteroids_map: np.ndarray,
+#                           location: tuple,
+#                           vaporized: List[tuple]):
+#     """
+#     Returns an interactive plot highlighting and removing the
+#     vaporized asteroids in order.
+#     Using altair plots, which are too slow for this purpose
+#     """
+
+#     asteroids_map = asteroids_map.copy()
+
+#     def demo(i):
+#         asteroid = vaporized[i]
+#         fire = np.zeros(asteroids_map.shape)
+#         fire[asteroid[0], asteroid[1]] = 1
+#         chart = plot_asteroid_map(asteroids_map,
+#                                   visible_asteroids=fire,
+#                                   optimal_point=location,
+#                                   legend_visible=False,
+#                                   xlims=(0, asteroids_map.shape[0]-1),
+#                                   ylims=(-asteroids_map.shape[1]+1, 0),
+#                                   )
+#         asteroids_map[asteroid[0], asteroid[1]] = 0
+#         return chart
+
+#     return interact(demo, i=widgets.Play(value=0,
+#                                          min=0,
+#                                          max=(len(vaporized)-1),
+#                                          step=1,
+#                                          ))
