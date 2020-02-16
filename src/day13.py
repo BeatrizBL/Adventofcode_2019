@@ -2,9 +2,9 @@ from src import computer
 
 from typing import List
 import os
-# import pandas as pd
 from scipy import sparse as sp
 import readchar
+import time
 
 import matplotlib.pyplot as plt
 import matplotlib.animation
@@ -19,7 +19,8 @@ class ArcadeCabinet(object):
 
     def __init__(self, program_path: str,
                  root_path: str = 'data/raw',
-                 console: bool = False
+                 console: bool = False,
+                 autoplay: bool = False
                  ):
 
         # Check the parameters
@@ -45,6 +46,7 @@ class ArcadeCabinet(object):
         # Game parameters
         self.console = console
         self.score = 0
+        self.autoplay = autoplay
 
     def insert_quarters(self, quarters: int):
         self.computer.update_memory((0, quarters))
@@ -135,6 +137,28 @@ class ArcadeCabinet(object):
                 key = 'neutral'
         return key
 
+    def _get_key(self):
+        """ Returns the next movement, depending on whether the user is
+        playing or not.
+        - If the user is playing, reads an arrow
+        - If the computer is playing, it computes the direction using the
+        relative positions of the ball and the paddle
+        """
+        if not self.autoplay:
+            return self._read_key()
+        else:
+            ball = (self.screen==self.tiles['ball']).nonzero()
+            paddle = (self.screen==self.tiles['paddle']).nonzero()
+            if len(ball[0])>0 and len(paddle[0])>0:
+                if ball[0][0] < paddle[0][0]:
+                    return 'left'
+                elif ball[0][0] > paddle[0][0]:
+                    return 'right'
+                else:
+                    return 'neutral'
+            else:
+                return 'neutral'
+
     def start_game(self):
         """ Runs the full program """
         self.computer.run_program()
@@ -146,20 +170,21 @@ class ArcadeCabinet(object):
 
         leftovers = []
         while not self.computer.execution_finished:
+            if self.autoplay is True:
+                time.sleep(0.2)
+
             if self.computer.waiting_for_input:
-                key = self._read_key()
+                key = self._get_key()
                 if key=='left':
-                    print('Left!')
                     self.computer.set_input(-1, clear=True)
                 elif key=='right':
-                    print('Right!')
                     self.computer.set_input(1, clear=True)
                 else:
-                    print('Neutral!')
                     self.computer.set_input(0, clear=True)
 
             # Update the screen after the movement
             output = self.computer.get_output()
+            self.computer.input_queue.queue.clear()
             leftovers = self._update_status(output)
 
             # Sometimes the output is not complete...
@@ -167,6 +192,7 @@ class ArcadeCabinet(object):
                 output = leftovers + self.computer.get_output()
                 leftovers = self._update_status(output)
             self._print_screen(output)
+            self.computer.input_queue.queue.clear()
 
     def count_tiles(self, tile_type: str) -> int:
         """ Count tiles type in the current screen """
@@ -177,10 +203,11 @@ class ArcadeCabinet(object):
         return (self.screen == tile).sum()
 
 
-def play_arcade():
+def play_arcade(autoplay: bool = False):
     arcade = ArcadeCabinet(program_path='program.txt',
                            root_path='data/raw/day13',
-                           console=True)
+                           console=True,
+                           autoplay=autoplay)
 
     print("Let's play!")
     arcade.insert_quarters(2)
