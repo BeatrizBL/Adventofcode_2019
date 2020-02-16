@@ -35,6 +35,7 @@ class intcode_computer(object):
 
         # Program info
         self.program = program
+        self.waiting_for_input = False
         self.input_queue = Queue() if input_queue is None else input_queue
         self.output_queue = Queue() if output_queue is None else output_queue
 
@@ -51,7 +52,9 @@ class intcode_computer(object):
                                  '99': (self._finish, 0)
                                  }
 
-    def set_input(self, input):
+    def set_input(self, input, clear:bool = False):
+        if clear is True:
+            self.input_queue.queue.clear()
         self.input_queue.put(input)
 
     def get_output(self):
@@ -71,6 +74,9 @@ class intcode_computer(object):
         # Wait for it to finish
         if self.wait_execution is True:
             self.thread.join()
+
+    def update_memory(self, new_value: tuple):
+        self.memory[new_value[0]] = new_value[1]
 
     def _format_modes(self, modes: str, n_params: int) -> List[int]:
         """
@@ -185,7 +191,9 @@ class intcode_computer(object):
         pos = self._get_position(modes[-1])
 
         # Store the input value
+        self.waiting_for_input = True
         self.memory[pos] = self.input_queue.get()
+        self.waiting_for_input = False
         self.input_queue.task_done()
 
         # Increate the pointer
