@@ -64,3 +64,50 @@ def DFS_ORE(graph):
         return total
     
     return _DFSUtil('FUEL', 1) 
+
+
+def DFS_n_fuel(graph, ore: int): 
+    """ Depth First Search algorithm to count the number of
+    FUEL units that could be created with 'ore' units of ORE.
+    It accounts for the left overs in each reaction.
+    """
+    G = graph.copy()
+    def _DFSUtil(v, n: int): 
+        if v == 'ORE':
+            return n
+        
+        # How many v's I need using the leftovers
+        needed = n - G.nodes[v]['left']
+
+        # Remove the v's used from the leftovers
+        G.nodes[v]['left'] = max(0, G.nodes[v]['left'] - n)
+
+        # Produce the needed ones
+        total = 0
+        if needed > 0:
+            # How many times the reaction has to be executed
+            n_react = math.ceil(needed/G.nodes[v]['n'])
+
+            for i in G.predecessors(v): 
+                needed_i = n_react*G[i][v]['weight']
+                total += _DFSUtil(i, needed_i)
+            G.nodes[v]['left'] += n_react*G.nodes[v]['n'] - needed
+        return total
+    
+    # ORE required to compute 1 fuel
+    min_ore = _DFSUtil('FUEL', 1)
+
+    # Initialize the loop variables (1 fuel created)
+    n_fuel = 1
+    used_ore = min_ore
+    fuel_iter = 1
+
+    while fuel_iter>0:
+        # Minimum number of fuels that could be created
+        # in this iteration without using the leftovers
+        fuel_iter = math.floor((ore-used_ore)/min_ore)
+        used_ore += _DFSUtil('FUEL', fuel_iter)
+        if ore > used_ore:
+            n_fuel += fuel_iter
+
+    return n_fuel
